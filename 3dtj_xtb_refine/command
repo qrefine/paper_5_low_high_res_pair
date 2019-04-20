@@ -1,0 +1,1 @@
+nohup qr.refine 3dtj_refine_001_complete.pdb 3dtj_refine_001.mtz mode=refine maxnum_residues_in_cluster=50 quantum.nproc=2 parallel.nproc=10 max_bond_rmsd=0.02  stpmax=0.2 gradient_only=true clustering=true use_convergence_test=true  opt_log=1 restraints=qm  engine_name=xtb  > 3dtj_xtb_refine_MaxRes50.log   2>&1 &
