@@ -29,6 +29,7 @@ phenix.superpose_pdbs 3dtj_refine_001.pdb 3ds1_refine_001.pdb
 qr.finalyse 3dtj_refine_001.pdb
 
 8) Run refinement
+
 a. 3dtj start Rw: 0.2614 Rf: 0.3327 Rf-Rw: 0.0713 rmsd(b):  0.0039
 
 # 3dtj xtb refinements 
