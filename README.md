@@ -35,6 +35,7 @@ a. 3dtj start Rw: 0.2614 Rf: 0.3327 Rf-Rw: 0.0713 rmsd(b):  0.0039
 
 1) mode=refine quantum.nproc=2 parallel.nproc=10 max_bond_rmsd=0.02 stpmax=0.2 gradient_only=true clustering=true use_convergence_test=true opt_log=1 restraints=qm engine_name=xtb
 
-a. maxnum_residues_in_cluster=15 -> 3dtj_xtb_refine_MaxRes15.log (49 clusters) - 
-Rw: 0.2659 Rf: 0.3186 Rf-Rw: 0.0527 rmsd(b):  0.0113 
-b. maxnum_residues_in_cluster=50 -> 3dtj_xtb_refine_MaxRes50.log (39 clusters) - run on cu38
+  a. maxnum_residues_in_cluster=15 -> 3dtj_xtb_refine_MaxRes15.log (49 clusters) - 
+  Rw: 0.2659 Rf: 0.3186 Rf-Rw: 0.0527 rmsd(b):  0.0113 
+  
+  b. maxnum_residues_in_cluster=50 -> 3dtj_xtb_refine_MaxRes50.log (39 clusters) - run on cu38
