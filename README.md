@@ -30,3 +30,4 @@ qr.finalyse 3dtj_refine_001.pdb
 
 8) Run refinement
 
+# 3dtj xtb refinements 
