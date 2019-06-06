@@ -49,3 +49,5 @@ a. 3dtj start Rw: 0.2614 Rf: 0.3327 Rf-Rw: 0.0713 rmsd(b):  0.0039
   
   if model_name setting to None, scipt will go through whole pdb files find low_high pair,
   else just find high resolution pdb for specific pdb
+  
+  pdb_dict.pickle: Get info (resolution, rwork, rfree) for all X-ray diffraction PDB from RCSB and dump into pickle file
