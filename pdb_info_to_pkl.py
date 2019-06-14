@@ -16,7 +16,7 @@ def get_experimental_pdb_info(file_name,have_experimental_data=False):
   resolution = pdb_inp.resolution()
   data_type = pdb_inp.get_experiment_type()
   pdb_info = group_args(
-    data_typei = data_type,
+    data_type  = data_type,
     resolution = resolution,
     r_free     = r_free,
     r_work     = r_work,
@@ -27,7 +27,7 @@ def get_experimental_pdb_info(file_name,have_experimental_data=False):
   return (prefix,pdb_info)
 
 if __name__ == '__main__':
-  if 1:
+  if 0:
     rdict = {}
     path = "/home/pdb/pdb/"
     dpath = "/home/pdb/structure_factors/"    
@@ -48,5 +48,6 @@ if __name__ == '__main__':
         print pdb_code,"Failed",str(e)
     easy_pickle.dump(file_name='pdb_dict.pkl', obj=rdict)
   else:
-    get_experimental_pdb_info("/home/pdb/pdb/ab/pdb6abb.ent.gz")
+    info=get_experimental_pdb_info("/home/pdb/pdb/us/pdb1us0.ent.gz")
+    print info
    # get_experimental_pdb_info("/home/pdb/pdb/us/pdb1us0.ent.gz")
