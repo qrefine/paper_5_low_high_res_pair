@@ -40,3 +40,14 @@ a. 3dtj start Rw: 0.2614 Rf: 0.3327 Rf-Rw: 0.0713 rmsd(b):  0.0039
   Rw: 0.2659 Rf: 0.3186 Rf-Rw: 0.0527 rmsd(b):  0.0113 
   
   b. maxnum_residues_in_cluster=50 -> 3dtj_xtb_refine_MaxRes50.log (39 clusters) - run on cu38
+  
+  # Perfect pair select
+  
+  `phenix.python perfect_pair.py high_res=1.5 low_res=3.5 identity=100 model_name=None`
+  
+  params: high_res(default: 1.5), low_res(default: 3.5), indentity(default: 100), model_name(default: None)
+  
+  if model_name setting to None, scipt will go through whole pdb files find low_high pair,
+  else just find high resolution pdb for specific pdb
+  
+  pdb_dict.pickle: Get info (resolution, rwork, rfree) for all X-ray diffraction PDB from RCSB and dump into pickle file
