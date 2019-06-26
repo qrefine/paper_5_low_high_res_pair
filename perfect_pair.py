@@ -47,8 +47,10 @@ def get_perfect_pair(model, params, chain_ids=None):
   count = 0
   for chain in h.only_model().chains():
     if not chain.is_protein():
+      count+=1
       continue
     if chain_ids is not None and chain.id not in chain_ids():
+      count+=1
       continue
     sequence = chain.as_padded_sequence()
     l_blast = local_blast.pdbaa(seq=sequence) 
@@ -86,9 +88,9 @@ def run(params):
   work_dir = "/home/pdb/pdb/"
   pdb_info = easy_pickle.load(file_name='pdb_info.pkl')
   for key,value in pdb_info.items():
-    if value.resolution > params.low_res \
-      and value.have_experimental_data == True and \
-      ("X-RAY DIFFRACTION" in value.data_type or "ELECTRON MICROSCOPY" in value.data_type):
+    if value[0] > params.low_res \
+      and value[3]== True and \
+      ("X-RAY DIFFRACTION" in value[4] or "ELECTRON MICROSCOPY" in value[4]):
       model_name = "pdb"+key.lower()+".ent.gz"
       model_path = os.path.join(work_dir,key.lower()[1:3],model_name)
       if os.path.isfile(model_path):
@@ -96,8 +98,8 @@ def run(params):
           params.model_name = model_path
           model = mmtbx.model.manager(model_input=iotbx.pdb.input(model_path))
           rs,c = get_perfect_pair(model,params)
-          if c==0:
-            print key.upper(),value.resolution
+          if c==0 and rs:
+            print key.upper(),value[0],model.size()
             for i in rs:
               print i
             print "*"*80
@@ -113,8 +115,10 @@ def run_one(params):
   else:
     model = mmtbx.model.manager(model_input=iotbx.pdb.input(params.model_name))
   rs,c = get_perfect_pair(model, params)
-  for i in rs:
-    print i
+  if c==0 and rs:
+    print params.model_name,model.size()
+    for i in rs:
+      print i
 
 if __name__ == '__main__':
   args = sys.argv[1:]
