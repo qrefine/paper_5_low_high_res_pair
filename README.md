@@ -52,4 +52,4 @@ a. 3dtj start Rw: 0.2614 Rf: 0.3327 Rf-Rw: 0.0713 rmsd(b):  0.0039
   
   pdb_dict.pickle: Get info (resolution, rwork, rfree) for all X-ray diffraction PDB from RCSB and dump into pickle file
   
-  pdb_info.pkl: Get info(resolution, rwork, rfree, data_type, have_experimental_data) for all PDB from RCSB and dump into pickle file
+  pdb_info.pkl: Get info(resolution, rwork, rfree, have_experimental_data，data_type, space_group) for all PDB from RCSB and      dump into pickle file
