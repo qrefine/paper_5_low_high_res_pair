@@ -1,16 +1,17 @@
 from __future__ import division
-import os 
+import os
 import mmtbx.model
 import sys
 import iotbx.pdb
 from libtbx import group_args
 from libtbx import easy_pickle
-
+from libtbx.utils import null_out
 from iotbx.phil import process_command_line_with_files
 import iotbx.bioinformatics.pdb_info
 from iotbx.bioinformatics import local_blast
 from iotbx.bioinformatics.structure import summarize_blast_output
 from iotbx.pdb.fetch import fetch
+from cctbx.array_family import flex
 
 master_params_str = """\
 model_name = None
@@ -39,21 +40,16 @@ def get_inputs(args, log, master_params):
   params = cmdline.work.extract()
   return params
 
-def get_perfect_pair(model, params, chain_ids=None):
+def get_perfect_pair(hierarchy, params):
+  # Assume model is filtered to have protein etc
   pdb_info = iotbx.bioinformatics.pdb_info.pdb_info_local()
   pdb_id = os.path.basename(params.model_name).strip("pdb")[:4].upper()
-  h = model.get_hierarchy()
+  h = hierarchy
   results =  []
   count = 0
   for chain in h.only_model().chains():
-    if not chain.is_protein():
-      count+=1
-      continue
-    if chain_ids is not None and chain.id not in chain_ids():
-      count+=1
-      continue
     sequence = chain.as_padded_sequence()
-    l_blast = local_blast.pdbaa(seq=sequence) 
+    l_blast = local_blast.pdbaa(seq=sequence)
     blast_xml_result = l_blast.run()
     blast_summary = summarize_blast_output("\n".join(blast_xml_result))
     pdb_ids_to_study = {}
@@ -84,28 +80,78 @@ def get_perfect_pair(model, params, chain_ids=None):
       count += 1
   return results,count
 
+def file_from_code(code):
+  work_dir_1 = "/home/pdb/pdb/"
+  work_dir_2 = "/net/cci/pdb_mirror/mmcif/"
+  file_path = None
+  if(os.path.isdir(work_dir_1)):
+    file_path = os.path.join(
+      work_dir,key.lower()[1:3],"pdb"+key.lower()+".ent.gz")
+  elif(work_dir_2):
+    with open("".join([work_dir_2,"INDEX"]),"r") as fo:
+      for l in fo.readlines():
+        l = l.strip()
+        if(l.count(code)>0):
+          file_path = "".join([work_dir_2,l])
+          break
+  if(file_path is None): return None
+  assert os.path.isfile(file_path)
+  return file_path
+
+def percent_of_single_atom_residues(hierarchy):
+  sizes = flex.int()
+  h = hierarchy
+  for r in h.residue_groups():
+    sizes.append(r.atoms().size())
+  if(sizes.size()==0): return 0
+  return sizes.count(1)*100./sizes.size()
+
+def get_hierarchy(file_name):
+  pdb_inp = iotbx.pdb.input(file_name = file_name)
+  hierarchy = pdb_inp.construct_hierarchy()
+  asc = hierarchy.atom_selection_cache()
+  ss = "protein and not (resname UNX or resname UNK or resname UNL)"
+  sel = asc.selection(ss)
+  hierarchy = hierarchy.select(sel)
+  if(percent_of_single_atom_residues(hierarchy)>20):
+    return None
+  if(hierarchy.atoms().size()==0):
+    return None
+  if(len(hierarchy.models())>1):
+    return None
+  return hierarchy
+
 def run(params):
-  work_dir = "/home/pdb/pdb/"
   pdb_info = easy_pickle.load(file_name='pdb_info.pkl')
+  cntr = 0
   for key,value in pdb_info.items():
-    if value[0] > params.low_res \
+    ### DEBUG
+    #if key != "6MYY": continue
+    #if(not "ELECTRON MICROSCOPY" in value[4]): continue
+    ### DEBUG
+    fl = value[0] > params.low_res \
       and value[3]== True and \
-      ("X-RAY DIFFRACTION" in value[4] or "ELECTRON MICROSCOPY" in value[4]):
-      model_name = "pdb"+key.lower()+".ent.gz"
-      model_path = os.path.join(work_dir,key.lower()[1:3],model_name)
-      if os.path.isfile(model_path):
-        try:
-          params.model_name = model_path
-          model = mmtbx.model.manager(model_input=iotbx.pdb.input(model_path))
-          rs,c = get_perfect_pair(model,params)
-          if c==0 and rs:
-            print key.upper(),value[0],model.size()
-            for i in rs:
-              print i
-            print "*"*80
-        except Exception, e:
-          pass
-          #print "%s: %s"%(key, e)        
+      ("X-RAY DIFFRACTION" in value[4] or "ELECTRON MICROSCOPY" in value[4])
+    if(not fl): continue
+    file_name = file_from_code(code=key.lower())
+    if(file_name is None): continue
+    print file_name
+    try:
+      hierarchy = get_hierarchy(file_name = file_name)
+      if(hierarchy is None): continue
+      params.model_name = file_name
+      rs,c = get_perfect_pair(hierarchy, params)
+      if c==0 and rs:
+        print key.upper(), value[0], hierarchy.atoms().size()
+        for i in rs:
+          print i
+        print "*"*80
+    except KeyboardInterrupt: raise
+    except Exception, e:
+      print "FAILED:", file_name, str(e)
+    #
+    cntr += 1
+  print "Processed:", cntr, "out of total:", len(pdb_info.keys())
 
 def run_one(params):
   if not os.path.isfile(params.model_name):
@@ -123,7 +169,7 @@ def run_one(params):
 if __name__ == '__main__':
   args = sys.argv[1:]
   params = get_inputs(args=args, log=sys.stdout, master_params=master_params())
-  if  params.model_name:
+  if(params.model_name):
     run_one(params)
   else:
     run(params)
