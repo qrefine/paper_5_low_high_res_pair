@@ -91,7 +91,7 @@ def get_perfect_pair(hierarchy, params):
 
 def file_from_code(code):
   work_dir_1 = "/home/pdb/pdb/"
-  work_dir_2 = "/home/pdb/structure_factors/"
+  work_dir_2 = "/net/cci/pdb_mirror/mmcif/"
   file_path = None
   if(os.path.isdir(work_dir_1)):
     file_path = os.path.join(
@@ -138,12 +138,12 @@ def run(params):
     #if key != "6MYY": continue
     #if(not "ELECTRON MICROSCOPY" in value[4]): continue
     ### DEBUG
-    fl = value[0] > params.low_res and \
-      ("X-RAY DIFFRACTION" in value[4] or "ELECTRON MICROSCOPY" in value[4])
-    if(not fl): continue
-    if("X-RAY DIFFRACTION" in value[4]):
-      file_name = file_from_code(code=key.lower())
-      if(file_name is None): continue
+    fl = value[0] > params.low_res 
+    f2 = ("X-RAY DIFFRACTION" in value[4] and value[3]==True) \
+         or ("ELECTRON MICROSCOPY" in value[4])
+    if(not (fl and f2)): continue
+    file_name = file_from_code(code=key.lower())
+    if(file_name is None): continue
     try:
       hierarchy = get_hierarchy(file_name = file_name)
       if(hierarchy is None): continue
