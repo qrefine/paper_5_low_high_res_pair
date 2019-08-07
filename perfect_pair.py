@@ -27,6 +27,12 @@ low_res = 3.5
 identity = 100
   .type = int
   .help = sequence identity
+match_for_piece = False
+  .type = bool
+  .help = piece of low resolution pdb match with high_res pdb
+num_of_best_pdb = 3
+  .type = int
+  .help = num of high_res pdb for each chain
 """
 
 def master_params():
@@ -53,40 +59,44 @@ def get_perfect_pair(hierarchy, params):
     blast_xml_result = l_blast.run()
     blast_summary = summarize_blast_output("\n".join(blast_xml_result))
     pdb_ids_to_study = {}
+    result = []
     for hit in blast_summary:
       #hit.show(out=sys.stdout)
-      ali_identity = 100*hit.length/chain.residue_groups_size()
-      if ali_identity < 95:
-        continue
       if hit.identity < params.identity:
         continue
-      pdb_ids_to_study[hit.pdb_id] = (hit.chain_id,hit.identity)
+      if(not params.match_for_piece):
+        ali_identity = 100*hit.length/chain.residue_groups_size()
+        if ali_identity < 95:
+          continue
+      pdb_ids_to_study[hit.pdb_id] = (hit.chain_id,hit.identity,ali_identity)
+      for i in hit.all_ids:
+        pdb_ids_to_study[str(i)] = (hit.chain_id,hit.identity,ali_identity)
     #
-    info_list = pdb_info.get_info_list(pdb_ids_to_study.keys())
-    info_list.sort(key=lambda tup: tup[1])
-    if info_list :
-      best_pdb_id = info_list[0][0]
-      best_pdb_chain = pdb_ids_to_study[info_list[0][0]][0]
-      identity = pdb_ids_to_study[info_list[0][0]][1]
-    #  print "Best pdb:", info_list[0], "chain:", pdb_ids_to_study[info_list[0][0]]
-      if info_list[0][1] < params.high_res:
-        #print "%2s  %7s  %.2f  %.2f"%(chain.id,best_pdb_id +'_'+ best_pdb_chain,info_list[0][1],identity)
-        results.append((chain.id,best_pdb_id +'_'+ best_pdb_chain,info_list[0][1],identity))
+    info_lists = pdb_info.get_info_list(pdb_ids_to_study.keys())
+    info_lists.sort(key=lambda tup: tup[1])
+    print info_lists
+    if info_lists:
+      for info_list in info_lists:
+        best_pdb_id = info_list[0]
+        best_pdb_chain = pdb_ids_to_study[info_list[0]][0]
+        identity = pdb_ids_to_study[info_list[0]][1]
+        if info_list[1] < params.high_res:
+          result.append((chain.id,best_pdb_id +'_'+ best_pdb_chain,info_list[1],identity))
+      if result:
+        results.append(result[:params.num_of_best_pdb])
       else:
-        #print "%2s  not match"%chain.id
         count += 1
     else:
-      #print "%2s  not match"%chain.id
       count += 1
   return results,count
 
 def file_from_code(code):
   work_dir_1 = "/home/pdb/pdb/"
-  work_dir_2 = "/net/cci/pdb_mirror/mmcif/"
+  work_dir_2 = "/home/pdb/structure_factors/"
   file_path = None
   if(os.path.isdir(work_dir_1)):
     file_path = os.path.join(
-      work_dir,key.lower()[1:3],"pdb"+key.lower()+".ent.gz")
+      work_dir_1,code.lower()[1:3],"pdb"+code.lower()+".ent.gz")
   elif(work_dir_2):
     with open("".join([work_dir_2,"INDEX"]),"r") as fo:
       for l in fo.readlines():
@@ -135,14 +145,13 @@ def run(params):
     if(not fl): continue
     file_name = file_from_code(code=key.lower())
     if(file_name is None): continue
-    print file_name
     try:
       hierarchy = get_hierarchy(file_name = file_name)
       if(hierarchy is None): continue
       params.model_name = file_name
       rs,c = get_perfect_pair(hierarchy, params)
       if c==0 and rs:
-        print key.upper(), value[0], hierarchy.atoms().size()
+        print key.upper(), value[0], hierarchy.atoms().size(), value[4]
         for i in rs:
           print i
         print "*"*80
@@ -160,7 +169,10 @@ def run_one(params):
       model_input=iotbx.pdb.input(source_info=None, lines=data.readlines()))
   else:
     model = mmtbx.model.manager(model_input=iotbx.pdb.input(params.model_name))
-  rs,c = get_perfect_pair(model, params)
+  hierarchy = get_hierarchy(file_name = params.model_name)
+  assert (hierarchy is not None)
+  rs,c = get_perfect_pair(hierarchy, params)
+  print rs,c
   if c==0 and rs:
     print params.model_name,model.size()
     for i in rs:
