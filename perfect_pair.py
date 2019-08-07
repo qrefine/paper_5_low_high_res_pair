@@ -139,12 +139,12 @@ def run(params):
     #if key != "6MYY": continue
     #if(not "ELECTRON MICROSCOPY" in value[4]): continue
     ### DEBUG
-    fl = value[0] > params.low_res \
-      and value[3]== True and \
+    fl = value[0] > params.low_res and \
       ("X-RAY DIFFRACTION" in value[4] or "ELECTRON MICROSCOPY" in value[4])
     if(not fl): continue
-    file_name = file_from_code(code=key.lower())
-    if(file_name is None): continue
+    if("X-RAY DIFFRACTION" in value[4]):
+      file_name = file_from_code(code=key.lower())
+      if(file_name is None): continue
     try:
       hierarchy = get_hierarchy(file_name = file_name)
       if(hierarchy is None): continue
