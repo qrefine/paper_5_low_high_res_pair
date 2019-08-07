@@ -5,7 +5,6 @@ import sys
 import iotbx.pdb
 from libtbx import group_args
 from libtbx import easy_pickle
-from libtbx.utils import null_out
 from iotbx.phil import process_command_line_with_files
 import iotbx.bioinformatics.pdb_info
 from iotbx.bioinformatics import local_blast
@@ -133,6 +132,7 @@ def get_hierarchy(file_name):
 def run(params):
   pdb_info = easy_pickle.load(file_name='pdb_info.pkl')
   cntr = 0
+  results = []
   for key,value in pdb_info.items():
     ### DEBUG
     #if key != "6MYY": continue
@@ -154,12 +154,20 @@ def run(params):
         for i in rs:
           print i
         print "*"*80
+        result = group_args(
+          pdb_id     = key.upper(),
+          resolution = value[0],
+          size       = hierarchy.atoms().size(),
+          method     = value[4],
+          rs         = rs)
     except KeyboardInterrupt: raise
     except Exception, e:
       print "FAILED:", file_name, str(e)
     #
     cntr += 1
+  results.append(result)
   print "Processed:", cntr, "out of total:", len(pdb_info.keys())
+  easy_pickle.dump("pp_results.pkl",results)
 
 def run_one(params):
   if not os.path.isfile(params.model_name):
@@ -171,7 +179,6 @@ def run_one(params):
   hierarchy = get_hierarchy(file_name = params.model_name)
   assert (hierarchy is not None)
   rs,c = get_perfect_pair(hierarchy, params)
-  print rs,c
   if c==0 and rs:
     print params.model_name,model.size()
     for i in rs:
