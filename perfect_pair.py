@@ -50,7 +50,7 @@ def get_perfect_pair(hierarchy, params):
   pdb_info = iotbx.bioinformatics.pdb_info.pdb_info_local()
   pdb_id = os.path.basename(params.model_name).strip("pdb")[:4].upper()
   h = hierarchy
-  results =  []
+  results = {} 
   count = 0
   for chain in h.only_model().chains():
     sequence = chain.as_padded_sequence()
@@ -79,9 +79,10 @@ def get_perfect_pair(hierarchy, params):
         best_pdb_chain = pdb_ids_to_study[info_list[0]][0]
         identity = pdb_ids_to_study[info_list[0]][1]
         if info_list[1] < params.high_res:
-          result.append((chain.id,best_pdb_id +'_'+ best_pdb_chain,info_list[1],identity))
+          result.append((best_pdb_id, best_pdb_chain,info_list[1],identity))
+          result.sort(key=lambda tup: tup[3],reverse=True)
       if result:
-        results.append(result[:params.num_of_best_pdb])
+        results[chain.id] = result[:params.num_of_best_pdb]
       else:
         count += 1
     else:
@@ -114,8 +115,7 @@ def percent_of_single_atom_residues(hierarchy):
   if(sizes.size()==0): return 0
   return sizes.count(1)*100./sizes.size()
 
-def get_hierarchy(file_name):
-  pdb_inp = iotbx.pdb.input(file_name = file_name)
+def get_hierarchy(pdb_inp):
   hierarchy = pdb_inp.construct_hierarchy()
   asc = hierarchy.atom_selection_cache()
   ss = "protein and not (resname UNX or resname UNK or resname UNL)"
@@ -145,14 +145,15 @@ def run(params):
     file_name = file_from_code(code=key.lower())
     if(file_name is None): continue
     try:
-      hierarchy = get_hierarchy(file_name = file_name)
+      pdb_inp = iotbx.pdb.input(file_name = file_name)
+      hierarchy = get_hierarchy(pdb_inp = pdb_inp)
       if(hierarchy is None): continue
       params.model_name = file_name
       rs,c = get_perfect_pair(hierarchy, params)
       if c==0 and rs:
         print key.upper(), value[0], hierarchy.atoms().size(), value[4]
-        for i in rs:
-          print i
+        for k,v in rs.items():
+          print k, v
         print "*"*80
         result = group_args(
           pdb_id     = key.upper(),
@@ -167,22 +168,22 @@ def run(params):
     cntr += 1
   results.append(result)
   print "Processed:", cntr, "out of total:", len(pdb_info.keys())
-  easy_pickle.dump("pp_results.pkl",results)
+  easy_pickle.dump("pp_%d_%d_%d.pkl"\
+    %(params.low_res*10,params.high_res*10,params.identity),results)
 
 def run_one(params):
   if not os.path.isfile(params.model_name):
     data = fetch(id=params.model_name[:4])
-    model = mmtbx.model.manager(
-      model_input=iotbx.pdb.input(source_info=None, lines=data.readlines()))
+    pdb_inp = iotbx.pdb.input(source_info=None, lines=data.readlines())
   else:
-    model = mmtbx.model.manager(model_input=iotbx.pdb.input(params.model_name))
-  hierarchy = get_hierarchy(file_name = params.model_name)
+    pdb_inp = iotbx.pdb.input(params.model_name)
+  hierarchy = get_hierarchy(pdb_inp = pdb_inp)
   assert (hierarchy is not None)
   rs,c = get_perfect_pair(hierarchy, params)
   if c==0 and rs:
     print params.model_name,model.size()
-    for i in rs:
-      print i
+    for key,value in rs.items():
+      print key,value
 
 if __name__ == '__main__':
   args = sys.argv[1:]
