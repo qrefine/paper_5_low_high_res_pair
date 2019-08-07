@@ -74,7 +74,6 @@ def get_perfect_pair(hierarchy, params):
     #
     info_lists = pdb_info.get_info_list(pdb_ids_to_study.keys())
     info_lists.sort(key=lambda tup: tup[1])
-    print info_lists
     if info_lists:
       for info_list in info_lists:
         best_pdb_id = info_list[0]

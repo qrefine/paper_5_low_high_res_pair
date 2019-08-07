@@ -45,7 +45,19 @@ a. 3dtj start Rw: 0.2614 Rf: 0.3327 Rf-Rw: 0.0713 rmsd(b):  0.0039
   
   `phenix.python perfect_pair.py high_res=1.5 low_res=3.5 identity=100 model_name=None`
   
-  params: high_res(default: 1.5), low_res(default: 3.5), indentity(default: 100), model_name(default: None)
+  params: 
+
+  high_res(default: 1.5): resolution limit for high_res pdb
+ 
+  low_res(default: 3.5): resolution limit for low_res pdb
+
+  indentity(default: 100): Sequence Similarity Cutoff
+
+  model_name(default: None): specific pdb file name
+
+  match_for_piece(default: False): piece of low resolution pdb match with high_res pdb
+  
+  num_of_best_pdb(default: 3): num of high_res pdb for each chain
   
   if model_name setting to None, scipt will go through whole pdb files find low_high pair,
   else just find high resolution pdb for specific pdb
