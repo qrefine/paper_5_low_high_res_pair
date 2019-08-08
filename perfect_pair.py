@@ -17,13 +17,13 @@ model_name = None
   .type = path
   .multiple = False
   .help = Model file name
-high_res = 1.5
+high_res = 2
   .type = float
   .help = High resolution pdb limit
 low_res = 3.5
   .type = float
   .help = Low resolution pdb limit
-identity = 100
+identity = 95
   .type = int
   .help = sequence identity
 match_for_piece = False
@@ -181,7 +181,7 @@ def run_one(params):
   assert (hierarchy is not None)
   rs,c = get_perfect_pair(hierarchy, params)
   if c==0 and rs:
-    print params.model_name,model.size()
+    print params.model_name, hierarchy.atoms().size()
     for key,value in rs.items():
       print key,value
 
