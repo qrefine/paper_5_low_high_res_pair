@@ -26,12 +26,15 @@ low_res = 3.5
 identity = 95
   .type = int
   .help = sequence identity
-match_for_piece = False
+piece_matching = False
   .type = bool
   .help = piece of low resolution pdb match with high_res pdb
 num_of_best_pdb = 3
   .type = int
   .help = num of high_res pdb for each chain
+chain_matching = True
+  .type = bool
+  
 """
 
 def master_params():
@@ -61,16 +64,20 @@ def get_perfect_pair(hierarchy, params):
     result = []
     for hit in blast_summary:
       #hit.show(out=sys.stdout)
-      if hit.identity < params.identity:
+      hsp = hit.hsp
+      ### The Gapped BLAST algorithm allows gaps (deletions and insertions) to 
+      ### be introduced into the alignments
+      # the surprising default value (None, None) instead of an integer.
+      if hsp.gaps==(None, None): hsp.gaps=0
+      identity = (hsp.identities-hsp.gaps)*100/(hsp.align_length-hsp.gaps)
+      if(not params.piece_matching):
+        ali_identity = len(hsp.query.replace('X',''))/chain.residue_groups_size() 
+        identity = identity * ali_identity
+      if identity < params.identity:
         continue
-      if(not params.match_for_piece):
-        ali_identity = 100*hit.length/chain.residue_groups_size()
-        if ali_identity < 95:
-          continue
-      pdb_ids_to_study[hit.pdb_id] = (hit.chain_id,hit.identity,ali_identity)
+      pdb_ids_to_study[hit.pdb_id] = (hit.chain_id,identity)
       for i in hit.all_ids:
-        pdb_ids_to_study[str(i)] = (hit.chain_id,hit.identity,ali_identity)
-    #
+        pdb_ids_to_study[str(i)] = (hit.chain_id,identity)
     info_lists = pdb_info.get_info_list(pdb_ids_to_study.keys())
     info_lists.sort(key=lambda tup: tup[1])
     if info_lists:
@@ -83,11 +90,13 @@ def get_perfect_pair(hierarchy, params):
           result.sort(key=lambda tup: tup[3],reverse=True)
       if result:
         results[chain.id] = result[:params.num_of_best_pdb]
+      elif (params.chain_matching): continue
       else:
         count += 1
+    elif (params.chain_matching): continue
     else:
       count += 1
-  return results,count
+  return results, count
 
 def file_from_code(code):
   work_dir_1 = "/home/pdb/pdb/"
@@ -152,7 +161,7 @@ def run(params):
       rs,c = get_perfect_pair(hierarchy, params)
       if c==0 and rs:
         print key.upper(), value[0], hierarchy.atoms().size(), value[4]
-        for k,v in rs.items():
+        for k,v in sorted(rs.items()):
           print k, v
         print "*"*80
         result = group_args(
@@ -182,7 +191,7 @@ def run_one(params):
   rs,c = get_perfect_pair(hierarchy, params)
   if c==0 and rs:
     print params.model_name, hierarchy.atoms().size()
-    for key,value in rs.items():
+    for key,value in sorted(rs.items()):
       print key,value
 
 if __name__ == '__main__':
