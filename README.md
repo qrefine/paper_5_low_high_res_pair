@@ -55,7 +55,9 @@ a. 3dtj start Rw: 0.2614 Rf: 0.3327 Rf-Rw: 0.0713 rmsd(b):  0.0039
 
   model_name(default: None): specific pdb file name
 
-  match_for_piece(default: False): piece of low resolution pdb match with high_res pdb
+  piece_matching(default: False): piece of low resolution pdb match with high_res pdb
+  
+  chain_matching(defalut: True): Output pdb chain that satisfies the condition
   
   num_of_best_pdb(default: 3): num of high_res pdb for each chain
   
