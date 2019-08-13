@@ -85,7 +85,7 @@ def get_perfect_pair(hierarchy, params):
         best_pdb_id = info_list[0]
         best_pdb_chain = pdb_ids_to_study[info_list[0]][0]
         identity = pdb_ids_to_study[info_list[0]][1]
-        if info_list[1] < params.high_res:
+        if info_list[1] <= params.high_res:
           result.append((best_pdb_id, best_pdb_chain,info_list[1],identity))
           result.sort(key=lambda tup: tup[3],reverse=True)
       if result:
