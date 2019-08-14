@@ -73,11 +73,14 @@ def summarize_blast_output(blast_out=None, blast_file=None,
   results = []
   for i_hit, hit in enumerate(blast.alignments):
     pdb_chain_id = str(hit.accession)
-    pdb_id, chain_id = pdb_chain_id.split("_")
-    #print pdb_id
+    #hit.accession may only have pdb_id, e.g. 1EMG
+    if len(pdb_chain_id.split("_")) > 1:
+      pdb_id, chain_id = pdb_chain_id.split("_")
+    else:
+      pdb_id = pdb_chain_id
+      chain_id = None
+    #
     hsp = hit.hsps[0]
-    #print hit
-    #print hsp.identities,hsp.align_length
     assert (hsp.align_length > 0)
     identity = 100 * hsp.identities / hsp.align_length
     if (min_identity is not None) and (identity < min_identity):
@@ -89,11 +92,13 @@ def summarize_blast_output(blast_out=None, blast_file=None,
     all_ids = []
     for i_field, field in enumerate(hit_def_fields):
       if (field == "pdb") and (i_field < len(hit_def_fields) -1):
-        next_id = hit_def_fields[i_field + 1]
-        if (iotbx.pdb.fetch.looks_like_pdb_id(next_id)):
-          all_ids.append(next_id)
-    if (len(all_ids) == 0):
-      all_ids.append(pdb_id)
+        next_pdb_id = hit_def_fields[i_field + 1]
+        if "Chain" in hit_def_fields[i_field + 2]:
+          next_chain_id = hit_def_fields[i_field + 2].split()[0]
+        else:
+          next_chain_id = None
+        if (iotbx.pdb.fetch.looks_like_pdb_id(next_pdb_id)):
+          all_ids.append([next_pdb_id,next_chain_id])
     summary = blast_hit(
       hit_num=i_hit+1,
       pdb_id=pdb_id,
@@ -113,7 +118,7 @@ def get_all_matching_pdb_ids(sequence, min_identity):
     min_identity=min_identity)
   ids = []
   for result in results :
-    ids.extend([ pdb_id.lower() for pdb_id in result.all_ids ])
+    ids.extend([ pdb_chain_id[0].lower() for pdb_chain_id in result.all_ids ])
   return ids
 
 def get_ebi_pdb_wublast(sequence, email, file_name=None, blast_type="blastp",

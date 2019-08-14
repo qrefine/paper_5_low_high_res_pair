@@ -37,6 +37,30 @@ chain_matching = True
   
 """
 
+aa_codes = [
+"resname ALA",
+"resname ARG",
+"resname ASN",
+"resname ASP",
+"resname CYS",
+"resname GLN",
+"resname GLU",
+"resname GLY",
+"resname HIS",
+"resname ILE",
+"resname LEU",
+"resname LYS",
+"resname MET",
+"resname MSE",
+"resname PHE",
+"resname PRO",
+"resname SER",
+"resname THR",
+"resname TRP",
+"resname TYR",
+"resname VAL"
+]
+
 def master_params():
   return iotbx.phil.parse(master_params_str, process_includes=True)
 
@@ -77,7 +101,8 @@ def get_perfect_pair(hierarchy, params):
         continue
       pdb_ids_to_study[hit.pdb_id] = (hit.chain_id,identity)
       for i in hit.all_ids:
-        pdb_ids_to_study[str(i)] = (hit.chain_id,identity)
+        if i[0] not in (pdb_ids_to_study and [pdb_id]):
+          pdb_ids_to_study[str(i[0])] = (str(i[1]),identity)
     info_lists = pdb_info.get_info_list(pdb_ids_to_study.keys())
     info_lists.sort(key=lambda tup: tup[1])
     if info_lists:
@@ -127,7 +152,8 @@ def percent_of_single_atom_residues(hierarchy):
 def get_hierarchy(pdb_inp):
   hierarchy = pdb_inp.construct_hierarchy()
   asc = hierarchy.atom_selection_cache()
-  ss = "protein and not (resname UNX or resname UNK or resname UNL)"
+  ss = " or ".join(aa_codes)
+  ss = "(%s) and not (resname UNX or resname UNK or resname UNL)"%ss
   sel = asc.selection(ss)
   hierarchy = hierarchy.select(sel)
   if(percent_of_single_atom_residues(hierarchy)>20):
