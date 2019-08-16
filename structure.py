@@ -72,16 +72,6 @@ def summarize_blast_output(blast_out=None, blast_file=None,
     raise Sorry("No matching sequences!")
   results = []
   for i_hit, hit in enumerate(blast.alignments):
-    """
-    print hit
-    print hit.accession
-    print hit.hit_def
-    print hit.hit_id
-    print hit.title
-    print pdb_chain_id
-    print hit.hit_def
-    print hit.title
-    """
     pdb_chain_id = str(hit.accession)
     #hit.accession may only have pdb_id, e.g. 1EMB
     if len(pdb_chain_id.split("_")) > 1:
