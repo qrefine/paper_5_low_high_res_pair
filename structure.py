@@ -67,13 +67,23 @@ def summarize_blast_output(blast_out=None, blast_file=None,
     assert os.path.isfile(blast_file)
     blast_in = open(blast_file)
   parsed = NCBIXML.parse(blast_in)
-  blast = parsed.next()
+  blast = next(parsed)
   if (len(blast.alignments) == 0):
     raise Sorry("No matching sequences!")
   results = []
   for i_hit, hit in enumerate(blast.alignments):
+    """
+    print hit
+    print hit.accession
+    print hit.hit_def
+    print hit.hit_id
+    print hit.title
+    print pdb_chain_id
+    print hit.hit_def
+    print hit.title
+    """
     pdb_chain_id = str(hit.accession)
-    #hit.accession may only have pdb_id, e.g. 1EMG
+    #hit.accession may only have pdb_id, e.g. 1EMB
     if len(pdb_chain_id.split("_")) > 1:
       pdb_id, chain_id = pdb_chain_id.split("_")
     else:
@@ -90,6 +100,7 @@ def summarize_blast_output(blast_out=None, blast_file=None,
     # strings to extract the individual PDB IDs
     hit_def_fields = hit.hit_def.split("|")
     all_ids = []
+    all_ids.append([pdb_id,chain_id])
     for i_field, field in enumerate(hit_def_fields):
       if (field == "pdb") and (i_field < len(hit_def_fields) -1):
         next_pdb_id = hit_def_fields[i_field + 1]

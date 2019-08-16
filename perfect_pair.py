@@ -99,9 +99,9 @@ def get_perfect_pair(hierarchy, params):
         identity = identity * ali_identity
       if identity < params.identity:
         continue
-      pdb_ids_to_study[hit.pdb_id] = (hit.chain_id,identity)
       for i in hit.all_ids:
-        if i[0] not in (pdb_ids_to_study and [pdb_id]):
+        if i[0] == pdb_id: continue
+        if (i[0] not in pdb_ids_to_study) :
           pdb_ids_to_study[str(i[0])] = (str(i[1]),identity)
     info_lists = pdb_info.get_info_list(pdb_ids_to_study.keys())
     info_lists.sort(key=lambda tup: tup[1])
