@@ -213,12 +213,12 @@ def run_one(params):
   else:
     pdb_inp = iotbx.pdb.input(params.model_name)
   hierarchy = get_hierarchy(pdb_inp = pdb_inp)
-  assert (hierarchy is not None)
-  rs,c = get_perfect_pair(hierarchy, params)
-  if c==0 and rs:
-    print params.model_name, hierarchy.atoms().size()
-    for key,value in sorted(rs.items()):
-      print key,value
+  if (hierarchy is not None): 
+    rs,c = get_perfect_pair(hierarchy, params)
+    if c==0 and rs:
+      print params.model_name, hierarchy.atoms().size()
+      for key,value in sorted(rs.items()):
+        print key,value
 
 if __name__ == '__main__':
   args = sys.argv[1:]
