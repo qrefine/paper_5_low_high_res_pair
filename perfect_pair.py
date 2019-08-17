@@ -83,7 +83,11 @@ def get_perfect_pair(hierarchy, params):
     sequence = chain.as_padded_sequence()
     l_blast = local_blast.pdbaa(seq=sequence)
     blast_xml_result = l_blast.run()
-    blast_summary = summarize_blast_output("\n".join(blast_xml_result))
+    try:
+      blast_summary = summarize_blast_output("\n".join(blast_xml_result))
+    except StopIteration:
+      count += 1
+      continue
     pdb_ids_to_study = {}
     result = []
     for hit in blast_summary:
@@ -115,10 +119,8 @@ def get_perfect_pair(hierarchy, params):
           result.sort(key=lambda tup: tup[3],reverse=True)
       if result:
         results[chain.id] = result[:params.num_of_best_pdb]
-      elif (params.chain_matching): continue
       else:
         count += 1
-    elif (params.chain_matching): continue
     else:
       count += 1
   return results, count
@@ -185,7 +187,8 @@ def run(params):
       if(hierarchy is None): continue
       params.model_name = file_name
       rs,c = get_perfect_pair(hierarchy, params)
-      if c==0 and rs:
+      if (params.chain_matching and rs) or\
+        (not params.chain_matching and c==0 and rs):
         print key.upper(), value[0], hierarchy.atoms().size(), value[4]
         for k,v in sorted(rs.items()):
           print k, v
@@ -215,7 +218,8 @@ def run_one(params):
   hierarchy = get_hierarchy(pdb_inp = pdb_inp)
   if (hierarchy is not None): 
     rs,c = get_perfect_pair(hierarchy, params)
-    if c==0 and rs:
+    if (params.chain_matching and rs) or\
+      (not params.chain_matching and c==0 and rs):
       print params.model_name, hierarchy.atoms().size()
       for key,value in sorted(rs.items()):
         print key,value
