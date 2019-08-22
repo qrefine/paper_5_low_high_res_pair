@@ -30,12 +30,12 @@ def checkblast():
   phenix_blast_exe=''
   systype=sys.platform #linux2,darwin,win32
   sysname='Linux'
-  phenix_blast_exe='blastall_%s'%(systype)
+  phenix_blast_exe='blastp_%s'%(systype)
   if systype=='win32':
-    phenix_blast_exe='blastall_%s.exe'%(systype)
+    phenix_blast_exe='blastp_%s.exe'%(systype)
     sysname='Windows'
   elif systype=='darwin':
-    phenix_blast_exe='blastall_%s'%(systype)
+    phenix_blast_exe='blastp_%s'%(systype)
     sysname='OSX'
   else:
     pass
@@ -44,7 +44,7 @@ def checkblast():
   if os.path.exists(phenix_blast):
     blastpath=phenix_blast
     blastexe=phenix_blast_exe
-    print('%s version is running...\n'%sysname)
+    #print('%s version is running...\n'%sysname)
   else:
     print('BLAST executable does not exist. please check your Phenix installation.')
     sys.exit(0)
@@ -74,14 +74,16 @@ class pdbaa(object):
     fastaline=">%s\n%s\n"%(self.prefix,self.seq)
     f=open(fasta_path,'w').writelines(fastaline)
     dbname="pdbaa.00"
-    outfmt="-m 7" #xml_out
+    outfmt="-outfmt 5" #xml_out
     blastdb=os.path.join(ligand_lib_dir,dbname)
 
-    blastrun_seq=" -p blastp -i %s -a 8 -F F -W 3 -G 11 -E 2 \
-        -V F -e 1E-3 %s -d %s"%(fasta_path,outfmt, blastdb)
+#    blastrun_seq=" -p blastp -i %s -a 8 -F F -W 3 -G 11 -E 2 \
+#        -V F -e 1E-3 %s -d %s"%(fasta_path,outfmt, blastdb)
+  
+    blastrun_seq= "-query %s %s -evalue 1E-3 -num_threads 8 -db %s"%(fasta_path, outfmt, blastdb)
 
     cmds="%s %s"%(blastpath,blastrun_seq)
-    #print cmds
+    #print(cmds)
     try:
       result = easy_run.fully_buffered(
         command=cmds,
@@ -91,8 +93,8 @@ class pdbaa(object):
     else :
       ## output contain wrong tag e.g. 6f3a
       ## should remove later
-      if result.stdout_lines[-2] != "  </BlastOutput_iterations>":
-        result.stdout_lines[-2] = "  </BlastOutput_iterations>"
+    #  if result.stdout_lines[-2] != "  </BlastOutput_iterations>":
+    #    result.stdout_lines[-2] = "  </BlastOutput_iterations>"
       ##
       if debug:
         output='myprotein.xml'
