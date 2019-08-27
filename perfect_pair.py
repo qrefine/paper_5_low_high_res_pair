@@ -5,19 +5,25 @@ import sys
 import iotbx.pdb
 from libtbx import group_args
 from libtbx import easy_pickle
+from libtbx.utils import Sorry
 from iotbx.phil import process_command_line_with_files
+from iotbx import bioinformatics
 import iotbx.bioinformatics.pdb_info
 from iotbx.bioinformatics import local_blast
 from iotbx.bioinformatics.structure import summarize_blast_output
 from iotbx.pdb.fetch import fetch
 from cctbx.array_family import flex
+import time
 
 master_params_str = """\
 model_name = None
   .type = path
   .multiple = False
   .help = Model file name
-high_res = 2
+engine = *blastp blastall
+  .type = choice(multi=False)
+  .help = blast engine: blastp->blast+ blastall->legacy blast
+high_res = None
   .type = float
   .help = High resolution pdb limit
 low_res = 3.5
@@ -72,57 +78,79 @@ def get_inputs(args, log, master_params):
   params = cmdline.work.extract()
   return params
 
-def get_perfect_pair(hierarchy, params):
+def pdb_perfect_pair(hierarchy, params):
   # Assume model is filtered to have protein etc
-  pdb_info = iotbx.bioinformatics.pdb_info.pdb_info_local()
   pdb_id = os.path.basename(params.model_name).strip("pdb")[:4].upper()
   h = hierarchy
   results = {} 
   count = 0
   for chain in h.only_model().chains():
     sequence = chain.as_padded_sequence()
-    l_blast = local_blast.pdbaa(seq=sequence)
-    blast_xml_result = l_blast.run()
-    try:
-      blast_summary = summarize_blast_output("\n".join(blast_xml_result))
-    except StopIteration:
-      count += 1
+    result, c = perfect_pair(sequence, params, pdb_id)
+    results[chain.id] = result
+    count += c
+  return results, count
+
+def sequence_perfect_pair(params):
+  with open(params.model_name, "r") as f:
+    fasta = f.read()
+    (fastas, unknows) = bioinformatics.fasta_alignment_parse(fasta)
+    for sequence in fastas.alignments:
+      result, c = perfect_pair(sequence, params)
+      print result
+
+def perfect_pair(sequence, params, pdb_id=None):
+  count = 0
+  pdb_info = iotbx.bioinformatics.pdb_info.pdb_info_local()
+  l_blast = local_blast.pdbaa(seq=sequence)
+  blast_xml_result = l_blast.run(debug=True, binary=params.engine)
+  #print blast_xml_result
+  try:
+    blast_summary = summarize_blast_output("\n".join(blast_xml_result))
+  except StopIteration:
+    count += 1
+  except Exception as e:
+    if (("mismatched tag" in str(e))and params.engine=="blastall"):
+      raise Sorry("setting engine=blastp and try again")
+  pdb_ids_to_study = {}
+  results = []
+  result = []
+  for hit in blast_summary:
+    #hit.show(out=sys.stdout)
+    hsp = hit.hsp
+    ### The Gapped BLAST algorithm allows gaps (deletions and insertions) to 
+    ### be introduced into the alignments
+    # blastall: the surprising default value (None, None) instead of an integer.
+    if hsp.gaps==(None, None): hsp.gaps=0
+    identity = (hsp.identities-hsp.gaps)*100/(hsp.align_length-hsp.gaps)
+    if(not params.piece_matching):
+      #ali_identity = len(hsp.query.replace('X',''))/chain.residue_groups_size() 
+      ali_identity = len(hsp.query.replace('X',''))/len(sequence.replace('X',''))
+      identity = identity * ali_identity
+    if identity < params.identity:
       continue
-    pdb_ids_to_study = {}
-    result = []
-    for hit in blast_summary:
-      #hit.show(out=sys.stdout)
-      hsp = hit.hsp
-      ### The Gapped BLAST algorithm allows gaps (deletions and insertions) to 
-      ### be introduced into the alignments
-      # the surprising default value (None, None) instead of an integer.
-      if hsp.gaps==(None, None): hsp.gaps=0
-      identity = (hsp.identities-hsp.gaps)*100/(hsp.align_length-hsp.gaps)
-      if(not params.piece_matching):
-        ali_identity = len(hsp.query.replace('X',''))/chain.residue_groups_size() 
-        identity = identity * ali_identity
-      if identity < params.identity:
-        continue
-      for i in hit.all_ids:
-        if i[0] == pdb_id: continue
-        if (i[0] not in pdb_ids_to_study) :
-          pdb_ids_to_study[str(i[0])] = (str(i[1]),identity)
-    info_lists = pdb_info.get_info_list(pdb_ids_to_study.keys())
-    info_lists.sort(key=lambda tup: tup[1])
-    if info_lists:
-      for info_list in info_lists:
-        best_pdb_id = info_list[0]
-        best_pdb_chain = pdb_ids_to_study[info_list[0]][0]
-        identity = pdb_ids_to_study[info_list[0]][1]
-        if info_list[1] <= params.high_res:
-          result.append((best_pdb_id, best_pdb_chain,info_list[1],identity))
-          result.sort(key=lambda tup: tup[3],reverse=True)
-      if result:
-        results[chain.id] = result[:params.num_of_best_pdb]
-      else:
-        count += 1
+    for i in hit.all_ids:
+      if i[0] == pdb_id: continue
+      if (i[0] not in pdb_ids_to_study) :
+        pdb_ids_to_study[str(i[0])] = (str(i[1]),identity)
+  info_lists = pdb_info.get_info_list(pdb_ids_to_study.keys())
+  if info_lists:
+    for info_list in info_lists:
+      best_pdb_id = info_list[0]
+      best_pdb_chain = pdb_ids_to_study[info_list[0]][0]
+      identity = pdb_ids_to_study[info_list[0]][1]
+      if params.high_res == None:
+         result.append((best_pdb_id, best_pdb_chain,info_list[1],identity))
+         result.sort(key=lambda tup:(tup[2],-tup[3]))
+      elif params.high_res != None and info_list[1] <= params.high_res:
+        result.append((best_pdb_id, best_pdb_chain,info_list[1],identity))
+        result.sort(key=lambda tup:(-tup[3],tup[2]))
+    if result:
+      results = result[:params.num_of_best_pdb]
     else:
       count += 1
+  else:
+    count += 1
   return results, count
 
 def file_from_code(code):
@@ -217,17 +245,26 @@ def run_one(params):
     pdb_inp = iotbx.pdb.input(params.model_name)
   hierarchy = get_hierarchy(pdb_inp = pdb_inp)
   if (hierarchy is not None): 
-    rs,c = get_perfect_pair(hierarchy, params)
+    rs,c = pdb_perfect_pair(hierarchy, params)
     if (params.chain_matching and rs) or\
       (not params.chain_matching and c==0 and rs):
       print params.model_name, hierarchy.atoms().size()
       for key,value in sorted(rs.items()):
         print key,value
+  else:
+    raise Sorry("The structure not contain protein")
 
 if __name__ == '__main__':
+  t0 = time.time()
   args = sys.argv[1:]
   params = get_inputs(args=args, log=sys.stdout, master_params=master_params())
   if(params.model_name):
-    run_one(params)
+    if (os.path.isfile(params.model_name) \
+      and (not iotbx.pdb.is_pdb_file(file_name=params.model_name)) \
+      and (not iotbx.pdb.is_pdb_mmcif_file(file_name=params.model_name))):
+      sequence_perfect_pair(params)
+    else:
+      run_one(params)
   else:
     run(params)
+  print "Total time: %6.2f"%(time.time()-t0)
