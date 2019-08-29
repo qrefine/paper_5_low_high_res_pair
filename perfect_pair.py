@@ -81,14 +81,15 @@ def get_inputs(args, log, master_params):
 def pdb_perfect_pair(hierarchy, params):
   # Assume model is filtered to have protein etc
   pdb_id = os.path.basename(params.model_name).strip("pdb")[:4].upper()
-  h = hierarchy
   results = {} 
   count = 0
-  for chain in h.only_model().chains():
+  for chain in hierarchy.only_model().chains():
     sequence = chain.as_padded_sequence()
-    result, c = perfect_pair(sequence, params, pdb_id)
-    results[chain.id] = result
-    count += c
+    result = perfect_pair(sequence, params, pdb_id)
+    if result:
+      results[chain.id] = result
+    else:
+      count += 1
   return results, count
 
 def sequence_perfect_pair(params):
@@ -96,25 +97,22 @@ def sequence_perfect_pair(params):
     fasta = f.read()
     (fastas, unknows) = bioinformatics.fasta_alignment_parse(fasta)
     for sequence in fastas.alignments:
-      result, c = perfect_pair(sequence, params)
+      result = perfect_pair(sequence, params)
       print result
 
 def perfect_pair(sequence, params, pdb_id=None):
-  count = 0
+  result=[]
   pdb_info = iotbx.bioinformatics.pdb_info.pdb_info_local()
   l_blast = local_blast.pdbaa(seq=sequence)
   blast_xml_result = l_blast.run(debug=True, binary=params.engine)
-  #print blast_xml_result
   try:
     blast_summary = summarize_blast_output("\n".join(blast_xml_result))
   except StopIteration:
-    count += 1
+    return result
   except Exception as e:
     if (("mismatched tag" in str(e))and params.engine=="blastall"):
       raise Sorry("setting engine=blastp and try again")
   pdb_ids_to_study = {}
-  results = []
-  result = []
   for hit in blast_summary:
     #hit.show(out=sys.stdout)
     hsp = hit.hsp
@@ -124,7 +122,6 @@ def perfect_pair(sequence, params, pdb_id=None):
     if hsp.gaps==(None, None): hsp.gaps=0
     identity = (hsp.identities-hsp.gaps)*100/(hsp.align_length-hsp.gaps)
     if(not params.piece_matching):
-      #ali_identity = len(hsp.query.replace('X',''))/chain.residue_groups_size() 
       ali_identity = len(hsp.query.replace('X',''))/len(sequence.replace('X',''))
       identity = identity * ali_identity
     if identity < params.identity:
@@ -145,13 +142,8 @@ def perfect_pair(sequence, params, pdb_id=None):
       elif params.high_res != None and info_list[1] <= params.high_res:
         result.append((best_pdb_id, best_pdb_chain,info_list[1],identity))
         result.sort(key=lambda tup:(-tup[3],tup[2]))
-    if result:
-      results = result[:params.num_of_best_pdb]
-    else:
-      count += 1
-  else:
-    count += 1
-  return results, count
+  result = result[:params.num_of_best_pdb]
+  return result
 
 def file_from_code(code):
   work_dir_1 = "/home/pdb/pdb/"
@@ -173,8 +165,7 @@ def file_from_code(code):
 
 def percent_of_single_atom_residues(hierarchy):
   sizes = flex.int()
-  h = hierarchy
-  for r in h.residue_groups():
+  for r in hierarchy.residue_groups():
     sizes.append(r.atoms().size())
   if(sizes.size()==0): return 0
   return sizes.count(1)*100./sizes.size()
@@ -214,7 +205,7 @@ def run(params):
       hierarchy = get_hierarchy(pdb_inp = pdb_inp)
       if(hierarchy is None): continue
       params.model_name = file_name
-      rs,c = get_perfect_pair(hierarchy, params)
+      rs,c = pdb_perfect_pair(hierarchy, params)
       if (params.chain_matching and rs) or\
         (not params.chain_matching and c==0 and rs):
         print key.upper(), value[0], hierarchy.atoms().size(), value[4]
