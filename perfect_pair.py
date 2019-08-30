@@ -131,15 +131,17 @@ def perfect_pair(sequence, params, pdb_id=None):
       if (i[0] not in pdb_ids_to_study) :
         pdb_ids_to_study[str(i[0])] = (str(i[1]),identity)
   info_lists = pdb_info.get_info_list(pdb_ids_to_study.keys())
+  info_lists.sort(key=lambda tup: tup[1])
   if info_lists:
     for info_list in info_lists:
+      if not info_list[1]: continue 
       best_pdb_id = info_list[0]
       best_pdb_chain = pdb_ids_to_study[info_list[0]][0]
       identity = pdb_ids_to_study[info_list[0]][1]
-      if params.high_res == None:
-         result.append((best_pdb_id, best_pdb_chain,info_list[1],identity))
-         result.sort(key=lambda tup:(tup[2],-tup[3]))
-      elif params.high_res != None and info_list[1] <= params.high_res:
+      if params.high_res is None:
+        result.append((best_pdb_id, best_pdb_chain,info_list[1],identity))
+        result.sort(key=lambda tup:(tup[2],-tup[3]))
+      elif float(info_list[1]) <= params.high_res:
         result.append((best_pdb_id, best_pdb_chain,info_list[1],identity))
         result.sort(key=lambda tup:(-tup[3],tup[2]))
   result = result[:params.num_of_best_pdb]
@@ -186,7 +188,7 @@ def get_hierarchy(pdb_inp):
   return hierarchy
 
 def run(params):
-  pdb_info = easy_pickle.load(file_name='pdb_info.pkl')
+  pdb_info = iotbx.bioinformatics.pdb_info.pdb_info_local().db_dict
   cntr = 0
   results = []
   for key,value in pdb_info.items():
@@ -194,6 +196,7 @@ def run(params):
     #if key != "6MYY": continue
     #if(not "ELECTRON MICROSCOPY" in value[4]): continue
     ### DEBUG
+    print value
     fl = value[0] > params.low_res 
     f2 = ("X-RAY DIFFRACTION" in value[4] and value[3]==True) \
          or ("ELECTRON MICROSCOPY" in value[4])
