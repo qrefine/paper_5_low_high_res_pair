@@ -95,10 +95,11 @@ def pdb_perfect_pair(hierarchy, params):
 def sequence_perfect_pair(params):
   with open(params.model_name, "r") as f:
     fasta = f.read()
-    (fastas, unknows) = bioinformatics.fasta_alignment_parse(fasta)
-    for sequence in fastas.alignments:
+    (seqs, unknows) = bioinformatics.seq_sequence_parse(fasta)
+    for seq in seqs:
+      sequence = seq.sequence
       result = perfect_pair(sequence, params)
-      print result
+      print seq.name,result
 
 def perfect_pair(sequence, params, pdb_id=None):
   result=[]
