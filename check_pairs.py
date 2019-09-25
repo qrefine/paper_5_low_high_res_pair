@@ -29,6 +29,11 @@ def run():
     low_code = result.pdb_id
     if (not check_data(low_code)): continue
     low_file = file_from_code(low_code)
+
+    pdb_inp = iotbx.pdb.input(low_file)
+    hierarchy = pdb_inp.construct_hierarchy()
+    atom_size = hierarchy.atoms().size()
+
     low_res = result.resolution
     chains = []
     codes = []
@@ -50,7 +55,7 @@ def run():
 
         ali = align(low_file,low_chain,high_file,high_chain)
         if ali < 0.99: continue
-        print(",".join([low_code, str(low_res), chain_str, high_code, high_chain, \
+        print(",".join([str(atom_size), low_code, str(low_res), chain_str, high_code, high_chain, \
           str(high_res),str(ali)]))
 
 def align(low_file,low_chain,high_file,high_chain):
