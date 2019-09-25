@@ -245,14 +245,16 @@ identify threshold.
       pdb_info = iotbx.bioinformatics.pdb_info.pdb_info_local().db_dict
       cntr = 0
       results = []
+      ## value read as string
       for key,value in pdb_info.items():
         ## DEBUG
         # if key != "6F3A": continue
         ##
-        fl = value[0] > self.params.low_res
-        f2 = ("X-RAY DIFFRACTION" in value[4] and value[3]==True) \
+        if (not value[0]): continue
+        f1 = (float(value[0]) >= self.params.low_res)
+        f2 = ("X-RAY DIFFRACTION" in value[4] and value[3]=="True") \
              or ("ELECTRON MICROSCOPY" in value[4])
-        if(not (fl and f2)): continue
+        if(not (f1 and f2)): continue
         file_name = self._file_from_code(code=key.lower())
         if(file_name is None): continue
         try:
