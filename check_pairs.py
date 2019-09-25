@@ -15,36 +15,43 @@ def file_from_code(code):
   assert os.path.isfile(file_path)
   return file_path
 
+def check_data(code):
+  data_path = "/home/pdb/structure_factors/"
+  file_path = os.path.join(
+    data_path, code.lower()[1:3], "r"+code.lower()+"sf.ent.gz")
+  if (not os.path.isfile(file_path)): return False
+  return True
+
 def run():
   results = easy_pickle.load("results.pkl")
   for result in results:
+    if (result.method is "ELECTRON MICROSCOPY"): continue
     low_code = result.pdb_id
+    if (not check_data(low_code)): continue
     low_file = file_from_code(low_code)
     low_res = result.resolution
-    cntr = 0
     chains = []
+    codes = []
+    ## result.model_rs means each chain of low_res pdbs pairs for sames model in model_rs
+    for code in result.model_rs:
+      codes.append(code)
+    
     for chain_rs in result.rs:
       chains.append(chain_rs.chain_ref)
 
+    chain_str = ".".join(chains)
     low_chain = result.rs[0].chain_ref
-    high_code = result.rs[0].match[0].pdb_code
-    high_file = file_from_code(high_code)
-    high_res = result.rs[0].match[0].resolution
-    high_chain = result.rs[0].match[0].chain_id
+    for m in result.rs[0].match:
+      high_code = m.pdb_code
+      if (high_code in codes):
+        high_file = file_from_code(high_code)
+        high_res = m.resolution
+        high_chain = m.chain_id
 
-    ali = align(low_file,low_chain,high_file,high_chain)
-    if ali < 0.99: continue
-    print(low_code, low_res, chains, high_code, high_chain, high_res,ali)
-      # if ali < 0.99: 
-      #   cntr += 1
-      #   print(low_code,low_chain,high_code,high_chain,ali)
-      #   continue
-      # print(low_code,low_chain,high_code,high_chain)
-      # print(ali)
-      # print(chain_rs)
-      # print("_"*80)
-    # if (cntr is 0):
-    #   print(low_code)
+        ali = align(low_file,low_chain,high_file,high_chain)
+        if ali < 0.99: continue
+        print(",".join([low_code, str(low_res), chain_str, high_code, high_chain, \
+          str(high_res),str(ali)]))
 
 def align(low_file,low_chain,high_file,high_chain):
   he = iotbx.pdb.input(file_name=low_file).construct_hierarchy()
@@ -59,8 +66,9 @@ def align(low_file,low_chain,high_file,high_chain):
     se = he.only_chain().as_padded_sequence()
     sx = hx.only_chain().as_padded_sequence()
   except Exception as e:
-    print ("only_chain() failed", str(e))
+    # print ("only_chain() failed", str(e))
   #   continue
+    return 0
   #
   ali = mmtbx.alignment.align(
     seq_a = se,
