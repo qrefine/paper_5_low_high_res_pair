@@ -57,7 +57,7 @@ identity = 95
 piece_matching = False
   .type = bool
   .help = piece of low resolution pdb match with high_res pdb
-num_of_best_pdb = 3
+n = 3
   .type = int
   .help = num of high_res pdb for each chain
 chain_matching = True
@@ -142,7 +142,7 @@ def perfect_pair(sequence, params, pdb_id=None):
       elif resolution <= params.high_res:
         result.append(g_a)
         result.sort(key=lambda tup:(-tup.identity,tup.resolution))
-  result = result[:params.num_of_best_pdb]
+  result = result[:params.n]
   return result
 
 def file_perfect_pair(model_name, params, is_input_sequence=False):
